@@ -1,4 +1,6 @@
-# Parallax.js
+# Parallax.js - IE8 compatible fork
+
+*NOTE:* This fork is a work in progress and comes with no warranties whatsoever. Some things might still be broken in IE8.
 
 Parallax Engine that reacts to the orientation of a smart device. Where no gyroscope or motion detection hardware is available, the position of the cursor is used instead.
 

@@ -29,6 +29,31 @@
 //
 //============================================================
 
+if (!Function.prototype.bind) {
+  Function.prototype.bind = function(oThis) {
+    if (typeof this !== 'function') {
+      // closest thing possible to the ECMAScript 5
+      // internal IsCallable function
+      throw new TypeError('Function.prototype.bind - what is trying to be bound is not callable');
+    }
+
+    var aArgs   = Array.prototype.slice.call(arguments, 1),
+        fToBind = this,
+        fNOP    = function() {},
+        fBound  = function() {
+          return fToBind.apply(this instanceof fNOP && oThis
+                 ? this
+                 : oThis,
+                 aArgs.concat(Array.prototype.slice.call(arguments)));
+        };
+
+    fNOP.prototype = this.prototype;
+    fBound.prototype = new fNOP();
+
+    return fBound;
+  };
+}
+
 /**
  * jQuery || Zepto Parallax Plugin
  * @author Matthew Wagerfield - @wagerfield
@@ -256,8 +281,8 @@
   };
 
   Plugin.prototype.updateDimensions = function() {
-    this.ww = window.innerWidth;
-    this.wh = window.innerHeight;
+    this.ww = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+    this.wh = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
     this.wcx = this.ww * this.originX;
     this.wcy = this.wh * this.originY;
     this.wrx = Math.max(this.wcx, this.ww - this.wcx);
@@ -268,8 +293,13 @@
     this.bounds = this.element.getBoundingClientRect();
     this.ex = this.bounds.left;
     this.ey = this.bounds.top;
-    this.ew = this.bounds.width;
-    this.eh = this.bounds.height;
+    if (!this.bounds.width) {
+      this.ew = this.bounds.right - this.bounds.left;
+      this.eh = this.bounds.bottom - this.bounds.top;
+    } else {
+      this.ew = this.bounds.width;
+      this.eh = this.bounds.height;
+    }
     this.ecx = this.ew * this.originX;
     this.ecy = this.eh * this.originY;
     this.erx = Math.max(this.ecx, this.ew - this.ecx);
@@ -286,15 +316,30 @@
       this.enabled = true;
       if (this.orientationSupport) {
         this.portrait = null;
-        window.addEventListener('deviceorientation', this.onDeviceOrientation);
+        if (!window.addEventListener)
+        {
+          document.attachEvent('deviceorientation', this.onDeviceOrientation);
+        } else {
+          window.addEventListener('deviceorientation', this.onDeviceOrientation);
+        }
         setTimeout(this.onOrientationTimer, this.supportDelay);
       } else {
         this.cx = 0;
         this.cy = 0;
         this.portrait = false;
-        window.addEventListener('mousemove', this.onMouseMove);
+        if (!window.addEventListener)
+        {
+          document.attachEvent('onmousemove', this.onMouseMove);
+        } else {
+          window.addEventListener('mousemove', this.onMouseMove);
+        }
       }
-      window.addEventListener('resize', this.onWindowResize);
+      if (!window.addEventListener)
+      {
+        document.attachEvent('resize', this.onWindowResize);
+      } else {
+        window.addEventListener('resize', this.onWindowResize);
+      }
       this.raf = requestAnimationFrame(this.onAnimationFrame);
     }
   };
@@ -376,6 +421,12 @@
   };
 
   Plugin.prototype.setPosition = function(element, x, y) {
+    if (isNaN(x)) {
+      x = 0;
+    }
+    if (isNaN(y)) {
+      y = 0;
+    }
     x += 'px';
     y += 'px';
     if (this.transform3DSupport) {
@@ -428,6 +479,7 @@
     }
     this.vx += (this.mx - this.vx) * this.frictionX;
     this.vy += (this.my - this.vy) * this.frictionY;
+
     for (var i = 0, l = this.$layers.length; i < l; i++) {
       var depth = this.depths[i];
       var layer = this.$layers[i];
